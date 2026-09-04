@@ -1,7 +1,7 @@
 #
 #
 #
-export PROJECT_NAME="MulleObjCOSFoundation"
+export PROJECT_NAME="MulleObjCFreeBSDFoundation"
 
 
 #
@@ -37,25 +37,19 @@ export PROJECT_EXTENSIONS="m:aam"
 #
 #
 #
-
-
-
-#
-#
-#
-
+export PROJECT_IDENTIFIER="MulleObjCFreeBSDFoundation"
 
 
 #
 #
 #
-
+export PROJECT_DOWNCASE_IDENTIFIER="mulle_objc_free_bsd_foundation"
 
 
 #
 #
 #
-
+export PROJECT_UPCASE_IDENTIFIER="MULLE_OBJC_FREE_BSD_FOUNDATION"
 
 
 #

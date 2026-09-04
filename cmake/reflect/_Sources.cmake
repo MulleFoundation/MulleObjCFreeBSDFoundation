@@ -11,12 +11,17 @@ endif()
 # contents selected with patternfile ??-source--sources
 #
 set( SOURCES
-src/MulleObjCOSFoundation.m
+src/NSBundle+FreeBSD.m
+src/NSFileManager+FreeBSD.m
+src/NSPathUtilities+FreeBSD.m
+src/NSProcessInfo+FreeBSD.m
+src/NSString+FreeBSD.m
+src/NSTask+FreeBSD.m
 )
 
 #
 # contents selected with patternfile ??-source--stage2-sources
 #
 set( STAGE2_SOURCES
-src/MulleObjCDeps+MulleObjCOSFoundation.m
+src/MulleObjCDeps+MulleObjCFreeBSDFoundation.m
 )
