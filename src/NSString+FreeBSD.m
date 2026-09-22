@@ -78,3 +78,20 @@
 }
 
 @end
+
+
+@implementation NSString( FileSystemString)
+
+- (NSString *) mulleUnixFileSystemString
+{
+   return( self);
+}
+
+
+- (NSString *) mulleWindowsFileSystemString
+{
+   return( [self stringByReplacingOccurrencesOfString:@"/"
+                                          withString:@"\\"]);
+}
+
+@end

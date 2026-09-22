@@ -40,6 +40,10 @@
 
 // other libraries of MulleObjCPosixFoundation
 
+// std-c and dependencies
+#include <pwd.h>
+#include <unistd.h>
+
 
 static NSString   *FreeBSDHomeDirectory( void)
 {
@@ -49,6 +53,25 @@ static NSString   *FreeBSDHomeDirectory( void)
    if( s)
       return( [NSString stringWithCString:s]);
    return( @"");
+}
+
+
+static NSString   *FreeBSDHomeDirectoryForUser( NSString *userName)
+{
+   struct passwd   *pw;
+   char            *s;
+   NSString        *home;
+
+   s = [userName UTF8String];
+   if( ! s)
+      return( nil);
+
+   pw = getpwnam( s);
+   if( ! pw)
+      return( nil);
+
+   home = [NSString stringWithUTF8String:pw->pw_dir];
+   return( home);
 }
 
 
@@ -72,13 +95,20 @@ static NSString   *FreeBSDTemporaryDirectory( void)
 
 static NSString   *FreeBSDUserName( void)
 {
-   char  *s;
+   struct passwd   *pw;
+   char            *s;
 
    s = getenv( "USER");
    if( ! s)
       s = getenv( "LOGNAME");
+   if( ! s)
+   {
+      pw = getpwuid( getuid());
+      if( pw)
+         s = pw->pw_name;
+   }
 
-   return( [NSString stringWithCString:s]);
+   return( [NSString stringWithCString:s ? s : "unknown"]);
 }
 
 
@@ -147,7 +177,7 @@ static _NSPathUtilityVectorTable   _FreeBSDTable =
 {
    FreeBSDUserName,
    FreeBSDHomeDirectory,
-   NULL,
+   FreeBSDHomeDirectoryForUser,
    FreeBSDSearchPathForDirectoriesInDomains,
    FreeBSDRootDirectory,
    FreeBSDTemporaryDirectory,
@@ -156,7 +186,7 @@ static _NSPathUtilityVectorTable   _FreeBSDTable =
 
 
 
-@implementation _NSPathUtilityVectorTable_Loader( Darwin)
+@implementation _NSPathUtilityVectorTable_Loader( FreeBSD)
 
 @dependency _NSPathUtilityVectorTable_Loader;
 

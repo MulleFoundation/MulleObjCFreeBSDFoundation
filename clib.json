@@ -1,0 +1,32 @@
+{
+   "name" : "MulleObjCFreeBSDFoundation",
+   "version" : "0.29.0",
+   "description" : "This is a [mulle-sde](https://mulle-sde.github.io/) project.",
+   "keywords" : [],
+   "license" : "UNLICENSED",
+   "repo" : "MulleFoundation/MulleObjCFreeBSDFoundation",
+   "src" : [
+      "src/generic/import-private.h",
+      "src/generic/import.h",
+      "src/generic/include-private.h",
+      "src/generic/include.h",
+      "src/MulleObjCDeps+MulleObjCFreeBSDFoundation.m",
+      "src/NSBundle+FreeBSD.m",
+      "src/NSFileManager+FreeBSD.m",
+      "src/NSPathUtilities+FreeBSD.m",
+      "src/NSProcessInfo+FreeBSD.m",
+      "src/NSString+FreeBSD.m",
+      "src/NSTask+FreeBSD.m",
+      "src/reflect/objc-deps.inc",
+      "src/reflect/_MulleObjCFreeBSDFoundation-export.h",
+      "src/reflect/_MulleObjCFreeBSDFoundation-import-private.h",
+      "src/reflect/_MulleObjCFreeBSDFoundation-import.h",
+      "src/reflect/_MulleObjCFreeBSDFoundation-include-private.h",
+      "src/reflect/_MulleObjCFreeBSDFoundation-include.h",
+      "src/reflect/_MulleObjCFreeBSDFoundation-provide.h"
+   ],
+   "dependencies" : {
+      "OS-Split/MulleObjCBSDFoundation": "*",
+      "OS-Split/MulleObjCPosixFoundation": "*"
+   }
+}

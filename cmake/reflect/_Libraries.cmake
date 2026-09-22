@@ -5,10 +5,48 @@
 #
 # Disable generation of this file with:
 #
-# mulle-sde environment set MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE DISABLE
+# mulle-sde environment --global set MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE DISABLE
 #
 if( MULLE_TRACE_INCLUDE)
    message( STATUS "# Include \"${CMAKE_CURRENT_LIST_FILE}\"" )
 endif()
 
-# there are no libraries in the sourcetree
+#
+# Generated from sourcetree: 7961B326-C17E-4E3F-A9BB-261A749F9719;execinfo;no-build,no-cmake-inherit,no-delete,no-dependency,no-fs,no-header,no-import,no-share,no-update,only-platform-freebsd;
+# Disable with : `mulle-sourcetree mark execinfo `
+# Disable for this platform: `mulle-sourcetree mark execinfo no-cmake-platform-${MULLE_UNAME}`
+# Disable for a sdk: `mulle-sourcetree mark execinfo no-cmake-sdk-<name>`
+#
+if( ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+   if( COLLECT_ALL_LOAD_OS_SPECIFIC_LIBRARIES_AS_NAMES)
+      list( APPEND ALL_LOAD_OS_SPECIFIC_LIBRARIES "execinfo")
+   else()
+      if( NOT EXECINFO_LIBRARY)
+         foreach( _TMP_EXECINFO_LIBRARY_TARGET execinfo)
+            if( TARGET ${_TMP_EXECINFO_LIBRARY_TARGET})
+               set( EXECINFO_LIBRARY ${_TMP_EXECINFO_LIBRARY_TARGET})
+               break()
+            endif()
+         endforeach()
+         if( NOT EXECINFO_LIBRARY)
+            find_library( EXECINFO_LIBRARY NAMES
+               execinfo
+            )
+         endif()
+         message( STATUS "EXECINFO_LIBRARY is ${EXECINFO_LIBRARY}")
+      endif()
+      if( EXECINFO_LIBRARY)
+            #
+            # Add EXECINFO_LIBRARY to ALL_LOAD_OS_SPECIFIC_LIBRARIES list.
+            # Disable with: `mulle-sourcetree mark execinfo no-cmake-add`
+            #
+            if( NOT ${EXECINFO_LIBRARY} IN_LIST ALL_LOAD_OS_SPECIFIC_LIBRARIES)
+               list( APPEND ALL_LOAD_OS_SPECIFIC_LIBRARIES ${EXECINFO_LIBRARY})
+            endif()
+            # intentionally left blank
+      else()
+         # Disable with: `mulle-sourcetree mark execinfo no-require-link`
+         message( SEND_ERROR "EXECINFO_LIBRARY was not found in execinfo")
+      endif()
+   endif()
+endif()

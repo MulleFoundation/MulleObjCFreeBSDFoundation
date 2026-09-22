@@ -32,19 +32,79 @@
 //  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 //  POSSIBILITY OF SUCH DAMAGE.
 //
+#define _GNU_SOURCE
+
 #import "import-private.h"
 
 // other files in this library
-
-// other libraries of MulleObjCPosixFoundation
+#import <MulleObjCOSBaseFoundation/NSBundle-Private.h>
+#import <MulleObjCOSBaseFoundation/NSFileManager.h>
 
 // std-c and dependencies
-#include <dlfcn.h>
+#include <sys/link_elf.h>
+#include <stdint.h>
+#include <string.h>
 
 
 @implementation NSBundle( FreeBSD)
 
 @dependency NSBundle( Posix);
 
+
+static int  collect_filesystem_libraries( struct dl_phdr_info *info,
+                                          size_t size,
+                                          void *userinfo)
+{
+   NSFileManager                    *manager;
+   NSMutableData                    *data;
+   size_t                           len;
+   uintptr_t                        section_end;
+   unsigned int                     i;
+   unsigned int                     n;
+   struct _MulleObjCSharedLibrary   libInfo;
+
+
+   // binary itself has no name it seems
+
+   len = strlen( info->dlpi_name);
+   if( ! len)
+      return( 0);
+   // no absolute path ? injected by kernel
+   if( info->dlpi_name[ 0] != '/')
+      return( 0);
+
+   libInfo.start  = (void *) info->dlpi_addr;
+   libInfo.end    = libInfo.start;
+   libInfo.handle = NULL;
+
+   n = info->dlpi_phnum;
+   for( i = 0; i < n; i++)
+   {
+      section_end = (uintptr_t) (libInfo.start +
+                                 info->dlpi_phdr[i].p_vaddr +
+                                 info->dlpi_phdr[i].p_memsz);
+      if( section_end > (uintptr_t) libInfo.end)
+         libInfo.end = (void *) section_end;
+   }
+
+   manager      = [NSFileManager defaultManager];
+   libInfo.path = [manager stringWithFileSystemRepresentation:(char *) info->dlpi_name
+                                                       length:len];
+   data = userinfo;
+   [data appendBytes:&libInfo
+              length:sizeof( libInfo)];
+
+   return( 0);
+}
+
+
++ (NSData *) _allSharedLibraries
+{
+   NSMutableData  *data;
+
+   data = [NSMutableData data];
+   dl_iterate_phdr( collect_filesystem_libraries, data);
+   return( data);
+}
 
 @end

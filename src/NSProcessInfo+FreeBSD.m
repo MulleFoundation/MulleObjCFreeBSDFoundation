@@ -83,26 +83,33 @@ static int  argc_argv_set_arguments( struct argc_argv  *info,
                                      char *s,
                                      size_t length)
 {
-   char   *p;
-   char   **q;
-   char   **q_sentinel;
-   char   *sentinel;
-   int    argc;
-   int    i;
+   char     *p;
+   char     *sentinel;
+   char     **q;
+   size_t   len;
+   int      argc;
 
    info->argc = 0;
    info->argv = NULL;
 
    sentinel = &s[ length];
-   if( p == sentinel)
-      return( 0);
 
+   //
+   // KERN_PROC_ARGS returns the argv strings, each NUL terminated,
+   // there is no argc/pointer preamble. Empty arguments are real arguments,
+   // so iterate by length and not until an empty string.
+   //
    argc = 0;
-   for( p = s; p < s; p++)
-      if( ! *p)
-         argc++;
+   p    = s;
+   while( p < sentinel)
+   {
+      len = strlen( p);
+      ++argc;
+      p = &p[ len + 1];
+   }
 
-   assert( argc && ! p[ -1]);
+   if( ! argc)
+      return( 0);
 
    info->argv = mulle_calloc( argc, sizeof( char *));
    if( ! info->argv)
@@ -110,14 +117,27 @@ static int  argc_argv_set_arguments( struct argc_argv  *info,
 
    info->argc = argc;
 
-   q          = info->argv;
-   q_sentinel = &q[ argc];
-   p          = s;
-
-   while( q < q_sentinel)
+   q = info->argv;
+   p = s;
+   while( q < &info->argv[ argc])
    {
-      *q++ = p;
-      p    = &p[ strlen( s) + 1];
+      len = strlen( p);
+
+      *q = mulle_malloc( len + 1);
+      if( ! *q)
+      {
+         while( q != info->argv)
+            mulle_free( *--q);
+
+         mulle_free( info->argv);
+         info->argv = NULL;
+         info->argc = 0;
+         return( -1);
+      }
+
+      memcpy( *q, p, len + 1);
+      ++q;
+      p = &p[ len + 1];
    }
 
    return( 0);
@@ -128,18 +148,19 @@ static int    _NSGetArgcArgv( struct argc_argv *info)
 {
    char     *buf;
    size_t   size;
-   int      mib[3];
+   int      mib[4];
    int      rval;
 
    memset( info, 0, sizeof( *info));
 
    /* Make a sysctl() call to get the raw argument space of the process. */
    mib[ 0] = CTL_KERN;
-   mib[ 1] = KERN_PROC_ARGS;
-   mib[ 2] = getpid();
+   mib[ 1] = KERN_PROC;
+   mib[ 2] = KERN_PROC_ARGS;
+   mib[ 3] = getpid();
 
    size = 0;
-   sysctl( mib, 3, NULL, &size, NULL, 0);
+   sysctl( mib, 4, NULL, &size, NULL, 0);
    if( ! size)
       return( -1);
 
@@ -147,7 +168,7 @@ static int    _NSGetArgcArgv( struct argc_argv *info)
    if( ! buf)
       return( -1);
 
-   if( sysctl( mib, 3, buf, &size, NULL, 0) == -1)
+   if( sysctl( mib, 4, buf, &size, NULL, 0) == -1)
    {
       free( buf);
       return( -1);
@@ -177,9 +198,15 @@ static void   unlazyArguments( NSProcessInfo *self)
 
 - (NSArray *) arguments
 {
+   NSArray   *value;
+
+   [_lock lock];
    if( ! _arguments)
       unlazyArguments( self);
-   return( _arguments);
+   value = [[_arguments retain] autorelease];
+   [_lock unlock];
+
+   return( value);
 }
 
 
@@ -195,9 +222,15 @@ static void   unlazyEnvironment( NSProcessInfo *self)
 
 - (NSDictionary *) environment
 {
+   NSDictionary   *value;
+
+   [_lock lock];
    if( ! _environment)
       unlazyEnvironment( self);
-   return( _environment);
+   value = [[_environment retain] autorelease];
+   [_lock unlock];
+
+   return( value);
 }
 
 
@@ -207,20 +240,24 @@ static int   _NSGetExecutablePath( char **path)
 {
    char     *buf;
    size_t   size;
-   int      mib[3];
+   int      mib[4];
+   int      rval;
 
    mib[ 0] = CTL_KERN;
-   mib[ 1] = KERN_PROC_PATHNAME;
-   mib[ 2] = -1;
+   mib[ 1] = KERN_PROC;
+   mib[ 2] = KERN_PROC_PATHNAME;
+   mib[ 3] = getpid();
 
    size = 0;
-   sysctl( mib, 3, NULL, &size, NULL, 0);
-
-   if( ! size)
+   rval = sysctl( mib, 4, NULL, &size, NULL, 0);
+   if( rval == -1 || ! size)
       return( -1);
 
    buf = mulle_malloc( size);
-   if( sysctl( mib, 3, buf, &size, NULL, 0) == -1)
+   if( ! buf)
+      return( -1);
+
+   if( sysctl( mib, 4, buf, &size, NULL, 0) == -1)
    {
       mulle_free( buf);
       return( -1);
@@ -234,10 +271,25 @@ static int   _NSGetExecutablePath( char **path)
 
 static void   unlazyExecutablePath( NSProcessInfo *self)
 {
-   char   *path;
+   char        *path;
+   NSArray     *arguments;
+   NSString    *s;
 
    if( _NSGetExecutablePath( &path))
-      MulleObjCThrowInternalInconsistencyException( @"can't get executable path from sysctl (%d)", errno);
+   {
+      //
+      // sysctl can fail (e.g. the text vnode has no resolvable name), so
+      // fall back to argv[0] instead of aborting
+      //
+      arguments = [self arguments];
+      if( [arguments count])
+      {
+         s = [arguments objectAtIndex:0];
+         if( [s length] && [s hasPrefix:@"/"])
+            self->_executablePath = [s copy];
+      }
+      return;
+   }
 
    self->_executablePath = [[NSString alloc] initWithCString:path];
    mulle_free( path);
@@ -246,9 +298,15 @@ static void   unlazyExecutablePath( NSProcessInfo *self)
 
 - (NSString *) _executablePath
 {
+   NSString   *value;
+
+   [_lock lock];
    if( ! _executablePath)
       unlazyExecutablePath( self);
-   return( _executablePath);
+   value = [[_executablePath retain] autorelease];
+   [_lock unlock];
+
+   return( value);
 }
 
 
